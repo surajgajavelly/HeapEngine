@@ -1,0 +1,19 @@
+# CMake build directory
+/build/
+
+# Compiled files
+*.o
+*.out
+*.a
+*.so
+
+# Executables
+/run_tests
+/my_allocator_app
+
+# Doxygen output
+/docs/html/
+/docs/latex/
+
+# VSCode local settings
+/.vscode/

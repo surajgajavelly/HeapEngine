@@ -1,0 +1,46 @@
+/**
+Name: 
+ */
+
+ #ifndef MY_ALLOCATOR_H
+ #define MY_ALLOCATOR_H
+
+ #include <stddef.h> //For size_t
+
+ /**
+  * @brief Allocates 'size' bytes of uninitialized memory.
+  * 
+  * @param size The number of bytes to allocate
+  * @return A pointer to the allocated memory, or NULL if the request fails.
+  * 
+  */
+ void *my_malloc(size_t size);
+
+ /**
+  * @brief Frees a block of memory previously allocated by my_malloc.
+  * 
+  * @param ptr A pointer to the memory block to be freed.
+  */
+ void my_free(void *ptr);
+
+ /**
+  * @brief Allocates memory for an array of 'nmemb' elements of 'size' bytes 
+  * each and initializes all bits to zero.
+  * 
+  * @param nmemb Number of elements.
+  * @param size Size of each element.
+  * @return A pointer to the allocated memory, or NULL if the request fails.
+  */
+ void *my_calloc(size_t nmemb, size_t size);
+
+ /**
+  * @brief Changes the size of the memory block pointed to by 'ptr' to 'size' bytes.
+  * 
+  * @param ptr pointer to the memory block to be resized.
+  * @param size The new size for the memory block.
+  * @return A pointer to the resized memory block, or NULL if the request fails.
+  * 
+  */
+ void *my_realloc(void *ptr, size_t size);
+
+ #endif // MY_ALLOCATOR_H
