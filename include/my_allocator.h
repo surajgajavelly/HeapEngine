@@ -8,6 +8,12 @@ Name:
  #include <stddef.h> //For size_t
 
  /**
+  * @brief 
+  * 
+  */
+ void allocator_init(void); 
+ 
+ /**
   * @brief Allocates 'size' bytes of uninitialized memory.
   * 
   * @param size The number of bytes to allocate
