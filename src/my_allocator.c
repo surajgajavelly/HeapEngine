@@ -11,12 +11,86 @@
 
  #include "my_allocator.h"
  #include <stddef.h> // For NULL
+ #include <stdio.h>
 
- #define HEAP_SIZE (1024 * 10)
+ #define HEAP_SIZE (1024 * 10) // 10KB
 
  static char heap[HEAP_SIZE];
-
  static BlockHeader *free_list_head = NULL;
+
+ // --- Helper Functions ---
+
+/**
+ * @brief Finds the first free block large enough to hold 'size' bytes.
+ * 
+ * @param size The minimum data size needed.
+ * @param prev_out A pointer to a BlockHeader pointer, which will be updated
+ * to a point to the block *before* the found block(or NULL if found block is the head).
+ * @return A pointer to the found block's header, or NULL if no suitable block.
+ */
+static BlockHeader *find_free_block(size_t size, BlockHeader **prev_out)
+{
+   BlockHeader *current = free_list_head;
+   *prev_out = NULL;
+
+   while (current)
+   {
+      if(current->is_free && current->size >= size)
+      {
+         return current;
+      }
+      *prev_out = current;
+      current = current->next;
+   }
+   return NULL;
+}
+
+static void split_and_prepare_block(BlockHeader *block_to_split, size_t requested_size, BlockHeader *prev)
+{
+   const size_t min_block_data_size = 8;
+   const size_t min_block_total_size = sizeof(BlockHeader) + min_block_data_size;
+
+   size_t original_block_size = block_to_split->size;
+
+   if ((original_block_size >= requested_size) && (original_block_size - requested_size >= min_block_total_size))
+   {
+      BlockHeader *new_free_block = (BlockHeader *)((char*)(block_to_split + 1) + requested_size);
+      new_free_block->size = original_block_size - requested_size - sizeof(BlockHeader);
+      new_free_block->is_free = 1;
+      new_free_block->next = block_to_split->next;
+
+      block_to_split->size = requested_size;
+      block_to_split->is_free = 0;
+      block_to_split->next = NULL;
+
+      if (prev)
+      {
+         prev->next = new_free_block;
+      }
+      else
+      {
+         free_list_head = new_free_block;
+      }
+   }
+   else
+   {
+      block_to_split->is_free = 0;
+
+      if (prev)
+      {
+         prev->next = block_to_split->next;
+      }
+      else
+      {
+         free_list_head = block_to_split->next;
+      }
+
+      block_to_split->next = NULL;
+   }
+
+}
+
+// --- Core Allocator Functions ---
 
 /**
  * @brief Initializes/resets the allocator.
@@ -44,34 +118,19 @@
       return NULL;
    }
    
-   BlockHeader *current = free_list_head;
+   size_t requested_size = size;
+
    BlockHeader *prev = NULL;
+   BlockHeader *block = find_free_block(requested_size, &prev);
 
-   while(current)
+   if(block == NULL)
    {
-      if(current->is_free && current->size >= size)
-      {
-         current->is_free = 0;
-
-         if(prev)
-         {
-            prev->next = current->next;
-         }
-         else
-         {
-            free_list_head = current->next;
-         }
-
-         current->next = NULL;
-
-         return (void*)(current + 1);
-      }
-
-      prev = current;
-      current = current->next;
+      return NULL;
    }
 
-   return NULL;
+   split_and_prepare_block(block, requested_size, prev);
+
+   return (void*)(block + 1);
  }
 
  /**
