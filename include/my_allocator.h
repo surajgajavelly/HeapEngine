@@ -1,5 +1,12 @@
 /**
-Name: 
+ * @file my_allocator.h
+ * @author your name (you@domain.com)
+ * @brief 
+ * @version 0.1
+ * @date 2025-10-23
+ * 
+ * @copyright Copyright (c) 2025
+ * 
  */
 
  #ifndef MY_ALLOCATOR_H
@@ -8,7 +15,18 @@ Name:
  #include <stddef.h> //For size_t
 
  /**
-  * @brief 
+  * @brief Metadata header for each memory block.
+  * 
+  */
+ typedef struct BlockHeader
+ {
+    size_t size;
+    int is_free;
+    struct BlockHeader *next;
+ } BlockHeader;
+
+ /**
+  * @brief Initializes the memory allocator. 
   * 
   */
  void allocator_init(void); 

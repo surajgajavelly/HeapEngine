@@ -16,11 +16,19 @@
 
  static char heap[HEAP_SIZE];
 
- static size_t bytes_allocated = 0;
+ static BlockHeader *free_list_head = NULL;
 
+/**
+ * @brief Initializes/resets the allocator.
+ * Sets up the entire heap as a single, large free block.
+ * 
+ */
  void allocator_init(void) 
  {
-   bytes_allocated = 0;
+   free_list_head = (BlockHeader*)heap;
+   free_list_head->size = HEAP_SIZE - sizeof(BlockHeader);
+   free_list_head->is_free = 1;
+   free_list_head->next = NULL;
  }
 
  /**
@@ -35,30 +43,79 @@
    {
       return NULL;
    }
+   
+   BlockHeader *current = free_list_head;
+   BlockHeader *prev = NULL;
 
-   if ((bytes_allocated + size) > HEAP_SIZE)
+   while(current)
    {
-      return NULL;
+      if(current->is_free && current->size >= size)
+      {
+         current->is_free = 0;
+
+         if(prev)
+         {
+            prev->next = current->next;
+         }
+         else
+         {
+            free_list_head = current->next;
+         }
+
+         current->next = NULL;
+
+         return (void*)(current + 1);
+      }
+
+      prev = current;
+      current = current->next;
    }
 
-   void *ptr = &heap[bytes_allocated];
-
-   bytes_allocated += size;
-
-   return ptr;
+   return NULL;
  }
 
+ /**
+  * @brief 
+  * 
+  * @param ptr 
+  */
  void my_free(void *ptr) 
  {
-    (void)ptr;
+   if(ptr == NULL)
+   {
+      return;
+   }
+
+   BlockHeader *block_to_free = (BlockHeader*)ptr - 1;
+
+   block_to_free->is_free = 1;
+
+   block_to_free->next = free_list_head;
+   free_list_head = block_to_free;
+
+
  }
 
+ /**
+  * @brief 
+  * 
+  * @param nmemb 
+  * @param size 
+  * @return void* 
+  */
  void *my_calloc(size_t nmemb, size_t size) {
     (void)nmemb;
     (void)size;
     return NULL;
  }
 
+ /**
+  * @brief 
+  * 
+  * @param ptr 
+  * @param size 
+  * @return void* 
+  */
  void *my_realloc(void *ptr, size_t size) {
     (void)ptr;
     (void)size;
