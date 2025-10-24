@@ -11,12 +11,17 @@
 
  #include "my_allocator.h"
  #include <stddef.h> // For NULL
+ #include <stdint.h>
  #include <stdio.h>
 
  #define HEAP_SIZE (1024 * 10) // 10KB
 
  static char heap[HEAP_SIZE];
  static BlockHeader *free_list_head = NULL;
+
+#ifndef ALIGNMENT
+#define ALIGNMENT 8
+#endif
 
  // --- Helper Functions ---
 
@@ -90,50 +95,7 @@ static void split_and_prepare_block(BlockHeader *block_to_split, size_t requeste
 
 }
 
-// --- Core Allocator Functions ---
-
-/**
- * @brief Initializes/resets the allocator.
- * Sets up the entire heap as a single, large free block.
- * 
- */
- void allocator_init(void) 
- {
-   free_list_head = (BlockHeader*)heap;
-   free_list_head->size = HEAP_SIZE - sizeof(BlockHeader);
-   free_list_head->is_free = 1;
-   free_list_head->next = NULL;
- }
-
- /**
-  * @brief Allocates 'size' bytes of uninitialized memory.
-  * 
-  * @param size 
-  * @return void* 
-  */
- void *my_malloc(size_t size) {
-
-   if(size == 0)
-   {
-      return NULL;
-   }
-   
-   size_t requested_size = size;
-
-   BlockHeader *prev = NULL;
-   BlockHeader *block = find_free_block(requested_size, &prev);
-
-   if(block == NULL)
-   {
-      return NULL;
-   }
-
-   split_and_prepare_block(block, requested_size, prev);
-
-   return (void*)(block + 1);
- }
-
- static BlockHeader *coalesce_block(BlockHeader *block_to_free)
+static BlockHeader *coalesce_block(BlockHeader *block_to_free)
  {
    BlockHeader *next_block = (BlockHeader *)((char*)(block_to_free + 1) + block_to_free->size);
 
@@ -173,6 +135,63 @@ static void split_and_prepare_block(BlockHeader *block_to_split, size_t requeste
    return block_to_free;
  }
 
+// --- Core Allocator Functions ---
+
+/**
+ * @brief Initializes/resets the allocator.
+ * Sets up the entire heap as a single, large free block.
+ * 
+ */
+ void allocator_init(void) 
+ {
+   free_list_head = (BlockHeader*)heap;
+   free_list_head->size = HEAP_SIZE - sizeof(BlockHeader);
+   free_list_head->is_free = 1;
+   free_list_head->next = NULL;
+ }
+
+ /**
+  * @brief Allocates 'size' bytes of uninitialized memory.
+  * 
+  * @param size 
+  * @return void* 
+  */
+ void *my_malloc(size_t size) {
+
+   if(size == 0)
+   {
+      return NULL;
+   }
+   
+   size_t requested_data_size = size;
+
+   size_t total_needed_in_block = requested_data_size + ALIGNMENT - 1 + sizeof(size_t);
+
+   BlockHeader *prev = NULL;
+   BlockHeader *block = find_free_block(total_needed_in_block, &prev);
+
+   if(block == NULL)
+   {
+      return NULL;
+   }
+
+   void* raw_data_ptr = (void*)(block + 1);
+   uintptr_t raw_addr = (uintptr_t)raw_data_ptr;
+
+   uintptr_t aligned_addr_with_offset = (raw_addr + sizeof(size_t) + ALIGNMENT - 1) & ~(uintptr_t)(ALIGNMENT - 1);
+   void* aligned_data_ptr = (void*)aligned_addr_with_offset;
+   void* offset_storage_ptr = (void*)(aligned_addr_with_offset - sizeof(size_t));
+
+   size_t actual_used_data_size = (size_t)((char*)aligned_data_ptr + requested_data_size - (char*)raw_data_ptr);
+
+   split_and_prepare_block(block, actual_used_data_size, prev);
+
+   size_t offset = (size_t)((char*)offset_storage_ptr - (char*)block);
+   *(size_t*)offset_storage_ptr = offset;
+
+   return aligned_data_ptr;
+ }
+
  /**
   * @brief 
   * 
@@ -185,7 +204,13 @@ static void split_and_prepare_block(BlockHeader *block_to_split, size_t requeste
       return;
    }
 
-   BlockHeader *block_to_free = (BlockHeader*)ptr - 1;
+   void* offset_storage_ptr = (void*)((uintptr_t)ptr - sizeof(size_t));
+
+   size_t offset = *(size_t*)offset_storage_ptr;
+
+
+
+   BlockHeader *block_to_free = (BlockHeader*)((char*)offset_storage_ptr - offset);
 
    if(!block_to_free->is_free)
    {

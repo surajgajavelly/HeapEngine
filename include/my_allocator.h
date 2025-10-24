@@ -14,6 +14,8 @@
 
  #include <stddef.h> //For size_t
 
+ #define ALIGNMENT 8
+
  /**
   * @brief Metadata header for each memory block.
   * 
