@@ -13,6 +13,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 # --- Compiler Warnings (Good Practice!) ---
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     add_compile_options(-Wall -Wextra -Wpedantic -Werror -g)
+    add_compile_definitions(UNITY_OUTPUT_COLOR)
 endif()
 
 # --- Build our 3rd-party Unity library ---
