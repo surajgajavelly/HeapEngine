@@ -133,6 +133,46 @@ static void split_and_prepare_block(BlockHeader *block_to_split, size_t requeste
    return (void*)(block + 1);
  }
 
+ static BlockHeader *coalesce_block(BlockHeader *block_to_free)
+ {
+   BlockHeader *next_block = (BlockHeader *)((char*)(block_to_free + 1) + block_to_free->size);
+
+   if((char*)next_block < (heap + HEAP_SIZE))
+   {
+      if(next_block->is_free)
+      {
+         BlockHeader *current = free_list_head;
+         BlockHeader *prev = NULL;
+
+         while (current)
+         {
+            if(current == next_block)
+            {
+               if(prev)
+               {
+                  prev->next = current->next;
+               }
+               else
+               {
+                  free_list_head = current->next;
+               }
+               break;
+            }
+            prev = current;
+            current = current->next;
+         }
+
+         if(free_list_head == next_block)
+         {
+            free_list_head = NULL;
+         }
+
+         block_to_free->size += next_block->size + sizeof(BlockHeader);
+      }
+   }
+   return block_to_free;
+ }
+
  /**
   * @brief 
   * 
@@ -147,12 +187,19 @@ static void split_and_prepare_block(BlockHeader *block_to_split, size_t requeste
 
    BlockHeader *block_to_free = (BlockHeader*)ptr - 1;
 
-   block_to_free->is_free = 1;
+   if(!block_to_free->is_free)
+   {
+      block_to_free->is_free = 1;
 
-   block_to_free->next = free_list_head;
-   free_list_head = block_to_free;
+      block_to_free = coalesce_block(block_to_free);
 
-
+      block_to_free->next = free_list_head;
+      free_list_head = block_to_free;
+   }
+   else
+   {
+      
+   }
  }
 
  /**
