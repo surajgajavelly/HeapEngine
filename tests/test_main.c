@@ -11,6 +11,10 @@
 
 #include "unity.h"
 #include "my_allocator.h"
+#include <stddef.h>
+#include <stdint.h>
+
+#define ALIGNMENT 8
 
 void setUp(void) 
 {
@@ -74,6 +78,29 @@ void test_free_should_coalesce_adjacent_blocks(void)
 
     TEST_ASSERT_EQUAL_PTR(ptr_A, ptr_D);
 }
+
+void test_malloc_should_return_aligned_memory(void)
+{
+    const int num_allocs = 5;
+    void *pointers[num_allocs];
+
+    for(int i = 0; i < num_allocs; i++)
+    {
+        pointers[i] = my_malloc(i * 10 + 1);
+        TEST_ASSERT_NOT_NULL(pointers[i]);
+
+        uintptr_t address = (uintptr_t)pointers[i];
+        TEST_ASSERT_EQUAL_INT(0, address % ALIGNMENT);
+    }
+
+    for(int i = 0; i < num_allocs; i++)
+    {
+        if(pointers[i] != NULL)
+        {
+            my_free(pointers[i]);
+        }  
+    }
+}
 int main(void) {
     UNITY_BEGIN(); // Sets up Unity
 
@@ -82,6 +109,7 @@ int main(void) {
     RUN_TEST(test_free_should_reuse_memory);
     RUN_TEST(test_malloc_should_split_large_block);
     RUN_TEST(test_free_should_coalesce_adjacent_blocks);
+    RUN_TEST(test_malloc_should_return_aligned_memory);
 
     return UNITY_END(); // Reports the results
 }
