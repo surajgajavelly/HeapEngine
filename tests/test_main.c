@@ -53,6 +53,27 @@ void test_malloc_should_split_large_block(void)
     TEST_ASSERT_NOT_NULL(ptr2);
 }
 
+void test_free_should_coalesce_adjacent_blocks(void)
+{
+    void *ptr_A = my_malloc(50);
+    TEST_ASSERT_NOT_NULL(ptr_A);
+
+    void *ptr_B = my_malloc(60);
+    TEST_ASSERT_NOT_NULL(ptr_B);
+
+    void *ptr_C = my_malloc(70);
+    TEST_ASSERT_NOT_NULL(ptr_C);
+
+    my_free(ptr_B);
+    my_free(ptr_A);
+
+    size_t size_D = 100;
+    void *ptr_D = my_malloc(size_D);
+
+    TEST_ASSERT_NOT_NULL(ptr_D);
+
+    TEST_ASSERT_EQUAL_PTR(ptr_A, ptr_D);
+}
 int main(void) {
     UNITY_BEGIN(); // Sets up Unity
 
@@ -60,6 +81,7 @@ int main(void) {
     RUN_TEST(test_malloc_basic_should_return_non_null);
     RUN_TEST(test_free_should_reuse_memory);
     RUN_TEST(test_malloc_should_split_large_block);
+    RUN_TEST(test_free_should_coalesce_adjacent_blocks);
 
     return UNITY_END(); // Reports the results
 }
