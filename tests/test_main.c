@@ -215,6 +215,16 @@ void test_realloc_grow_block_new_location(void)
     my_free(ptr2);
     
 }
+
+void test_malloc_fails_when_heap_too_small(void)
+{
+    size_t too_large_size = HEAP_SIZE - sizeof(BlockHeader) + 1;
+
+    void *ptr = my_malloc(too_large_size);
+
+    TEST_ASSERT_NULL(ptr);
+}
+
 int main(void) {
     UNITY_BEGIN(); // Sets up Unity
 
@@ -230,6 +240,7 @@ int main(void) {
     RUN_TEST(test_realloc_zero_size_acts_like_free);
     RUN_TEST(test_realloc_should_shrink_block);
     RUN_TEST(test_realloc_grow_block_new_location);
+    RUN_TEST(test_malloc_fails_when_heap_too_small);
 
     return UNITY_END(); // Reports the results
 }

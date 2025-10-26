@@ -15,8 +15,6 @@
  #include <stdio.h>
  #include <string.h>
 
- #define HEAP_SIZE (1024 * 10) // 10KB
-
  static char heap[HEAP_SIZE];
  static BlockHeader *free_list_head = NULL;
 

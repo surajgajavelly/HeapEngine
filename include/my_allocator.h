@@ -14,6 +14,8 @@
 
  #include <stddef.h> //For size_t
 
+ #define HEAP_SIZE (1024 * 10)
+
  #define ALIGNMENT 8
 
  /**
