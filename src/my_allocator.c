@@ -263,14 +263,51 @@ static BlockHeader *coalesce_block(BlockHeader *block_to_free)
  }
 
  /**
-  * @brief 
+  * @brief Changes the size of the memory block pointed to by 'ptr' to 'size' bytes.
   * 
-  * @param ptr 
-  * @param size 
-  * @return void* 
+  * @param ptr Pointer to the memory block to be resize, or NULL.
+  * @param size The new size for the memory block, in bytes.
+  * @return void* Pointer to the resized memory block, or NULL if fails.
   */
- void *my_realloc(void *ptr, size_t size) {
-    (void)ptr;
-    (void)size;
-    return NULL;
+ void *my_realloc(void *ptr, size_t new_size) {
+
+   if (ptr == NULL)
+   {
+      return my_malloc(new_size);
+   }
+
+   if (new_size == 0)
+   {
+      my_free(ptr);
+      return NULL;
+   }
+
+   void *offset_storage_ptr = (void*)((uintptr_t)ptr - sizeof(size_t));
+
+   size_t offset = *(size_t*)offset_storage_ptr;
+
+   BlockHeader *old_block_header = (BlockHeader*)((char*)offset_storage_ptr - offset);
+
+   size_t old_data_size = old_block_header->size;
+
+   if (new_size <= old_data_size)
+   {
+      return ptr;
+   }
+
+   void *new_ptr = my_malloc(new_size);
+
+   if (new_ptr == NULL)
+   {
+      return NULL;
+   }
+
+   size_t copy_size = (new_size > old_data_size) ? old_data_size : new_size;
+
+   memcpy(new_ptr, ptr, copy_size);
+
+   my_free(ptr);
+
+   return new_ptr;
+
  }
