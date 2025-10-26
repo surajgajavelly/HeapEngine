@@ -225,6 +225,19 @@ void test_malloc_fails_when_heap_too_small(void)
     TEST_ASSERT_NULL(ptr);
 }
 
+void test_free_null_pointer(void)
+{
+    my_free(NULL);
+
+    TEST_ASSERT_TRUE(1);
+}
+
+void test_malloc_zero_size(void)
+{
+    void *ptr = my_malloc(0);
+    TEST_ASSERT_NULL(ptr);
+}
+
 int main(void) {
     UNITY_BEGIN(); // Sets up Unity
 
@@ -241,6 +254,8 @@ int main(void) {
     RUN_TEST(test_realloc_should_shrink_block);
     RUN_TEST(test_realloc_grow_block_new_location);
     RUN_TEST(test_malloc_fails_when_heap_too_small);
+    RUN_TEST(test_free_null_pointer);
+    RUN_TEST(test_malloc_zero_size);
 
     return UNITY_END(); // Reports the results
 }
