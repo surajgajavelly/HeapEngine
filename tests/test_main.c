@@ -13,6 +13,8 @@
 #include "my_allocator.h"
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
+#include <limits.h>
 
 #define ALIGNMENT 8
 
@@ -101,6 +103,39 @@ void test_malloc_should_return_aligned_memory(void)
         }  
     }
 }
+
+void test_calloc_should_return_zeroed_memory(void)
+{
+    size_t num_elements = 15;
+    size_t element_size = sizeof(int);
+    size_t total_size = num_elements * element_size;
+
+    if (num_elements > 0 && element_size > SIZE_MAX / num_elements)
+    {
+        TEST_FAIL_MESSAGE("Test setup error: Size calculation would overflow.");
+        return;
+    }
+
+    int *ptr = (int*)my_calloc(num_elements, element_size);
+
+    TEST_ASSERT_NOT_NULL(ptr);
+
+    unsigned char zero_buffer[total_size];
+    memset(zero_buffer, 0, total_size);
+    TEST_ASSERT_EQUAL_INT(0, memcmp(ptr, zero_buffer, total_size));
+
+    my_free(ptr);
+}
+
+void test_calloc_should_fail_on_overflow(void)
+{
+    size_t large_num = SIZE_MAX / 2 + 2;
+    size_t size = 2;
+
+    void *ptr = my_calloc(large_num, size);
+
+    TEST_ASSERT_NULL(ptr);
+}
 int main(void) {
     UNITY_BEGIN(); // Sets up Unity
 
@@ -110,6 +145,8 @@ int main(void) {
     RUN_TEST(test_malloc_should_split_large_block);
     RUN_TEST(test_free_should_coalesce_adjacent_blocks);
     RUN_TEST(test_malloc_should_return_aligned_memory);
+    RUN_TEST(test_calloc_should_return_zeroed_memory);
+    RUN_TEST(test_calloc_should_fail_on_overflow);
 
     return UNITY_END(); // Reports the results
 }
