@@ -136,6 +136,85 @@ void test_calloc_should_fail_on_overflow(void)
 
     TEST_ASSERT_NULL(ptr);
 }
+
+void test_realloc_null_ptr_acts_like_malloc(void)
+{
+   size_t size = 50;
+   void *ptr = my_realloc(NULL, size);
+   TEST_ASSERT_NOT_NULL(ptr);
+   
+   uintptr_t address = (uintptr_t)ptr;
+   TEST_ASSERT_EQUAL_INT(0, address % ALIGNMENT);
+
+   my_free(ptr);
+}
+
+void test_realloc_zero_size_acts_like_free(void)
+{
+   size_t intitial_size = 50;
+   void *ptr1 = my_malloc(intitial_size);
+   TEST_ASSERT_NOT_NULL(ptr1);
+
+   void *ptr2 = my_realloc(ptr1, 0);
+   TEST_ASSERT_NULL(ptr2);
+
+   void *ptr3 = my_malloc(intitial_size);
+   TEST_ASSERT_NOT_NULL(ptr3);
+   TEST_ASSERT_EQUAL_PTR(ptr1, ptr3);
+
+   my_free(ptr3);
+
+}
+
+void test_realloc_should_shrink_block(void)
+{
+    size_t initial_size = 100;
+    size_t smaller_size = 50;
+
+    char *ptr = (char*)my_malloc(initial_size);
+    TEST_ASSERT_NOT_NULL(ptr);
+
+    memset(ptr, 'A', initial_size);
+
+    char *shrunk_ptr = (char*)my_realloc(ptr, smaller_size);
+    TEST_ASSERT_NOT_NULL(shrunk_ptr);
+    TEST_ASSERT_EQUAL_PTR(ptr, shrunk_ptr);
+
+    for (size_t i = 0; i < smaller_size; i++)
+    {
+        TEST_ASSERT_EQUAL_CHAR('A', shrunk_ptr[i]);
+    }
+
+    my_free(shrunk_ptr);
+}
+
+void test_realloc_grow_block_new_location(void)
+{
+    size_t initial_size = 50;
+    size_t larger_size = 100;
+
+    char *ptr1 = (char*)my_malloc(initial_size);
+    TEST_ASSERT_NOT_NULL(ptr1);
+    void *ptr2 = my_malloc(20);
+    TEST_ASSERT_NOT_NULL(ptr2);
+
+    memset(ptr1, 'B', initial_size);
+
+    char *grown_ptr = (char*)my_realloc(ptr1, larger_size);
+    TEST_ASSERT_NOT_NULL(grown_ptr);
+
+    for (size_t i = 0; i < initial_size; i++)
+    {
+        TEST_ASSERT_EQUAL_CHAR('B', grown_ptr[i]);
+    }
+
+    uintptr_t address = (uintptr_t)grown_ptr;
+    TEST_ASSERT_EQUAL_INT(0, address % ALIGNMENT);
+
+    my_free(grown_ptr);
+    my_free(ptr2);
+    
+}
 int main(void) {
     UNITY_BEGIN(); // Sets up Unity
 
@@ -147,6 +226,10 @@ int main(void) {
     RUN_TEST(test_malloc_should_return_aligned_memory);
     RUN_TEST(test_calloc_should_return_zeroed_memory);
     RUN_TEST(test_calloc_should_fail_on_overflow);
+    RUN_TEST(test_realloc_null_ptr_acts_like_malloc);
+    RUN_TEST(test_realloc_zero_size_acts_like_free);
+    RUN_TEST(test_realloc_should_shrink_block);
+    RUN_TEST(test_realloc_grow_block_new_location);
 
     return UNITY_END(); // Reports the results
 }
