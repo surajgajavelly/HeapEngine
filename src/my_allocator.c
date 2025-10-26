@@ -13,6 +13,7 @@
  #include <stddef.h> // For NULL
  #include <stdint.h>
  #include <stdio.h>
+ #include <string.h>
 
  #define HEAP_SIZE (1024 * 10) // 10KB
 
@@ -228,16 +229,37 @@ static BlockHeader *coalesce_block(BlockHeader *block_to_free)
  }
 
  /**
-  * @brief 
+  * @brief Allocates memory for an array of nmembq elements of size bytes each
+  * and initializes all bits to zero.
   * 
-  * @param nmemb 
-  * @param size 
-  * @return void* 
+  * @param nmemb Number of elements.
+  * @param size Size of the each element.
+  * @return void* Pointer to allocated zeroed memory, or NULL on failure/overflow.
   */
  void *my_calloc(size_t nmemb, size_t size) {
-    (void)nmemb;
-    (void)size;
-    return NULL;
+
+   if (nmemb == 0 || size == 0)
+   {
+      return NULL;
+   }
+
+   size_t total_size;
+
+   if (size > SIZE_MAX / nmemb)
+   {
+      return NULL;
+   }
+
+   total_size = nmemb * size;
+
+   void *ptr = my_malloc(total_size);
+
+   if (ptr != NULL)
+   {
+      memset(ptr, 0, total_size);
+   }
+
+   return ptr;
  }
 
  /**
