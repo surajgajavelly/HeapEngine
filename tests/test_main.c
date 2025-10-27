@@ -238,6 +238,79 @@ void test_malloc_zero_size(void)
     TEST_ASSERT_NULL(ptr);
 }
 
+void test_fragmentation_scenario(void)
+{
+    void *a = my_malloc(100);
+    TEST_ASSERT_NOT_NULL(a);
+
+    void *b = my_malloc(200);
+    TEST_ASSERT_NOT_NULL(b);
+
+    void *c = my_malloc(300);
+    TEST_ASSERT_NOT_NULL(c);
+
+    my_free(b);
+    b = NULL;
+
+    void *d = my_malloc(50);
+    TEST_ASSERT_NOT_NULL(d);
+
+    void *e = my_malloc(250);
+    TEST_ASSERT_NOT_NULL(e);
+
+    my_free(a);
+    my_free(c);
+    my_free(d);
+    my_free(e);
+}
+
+void test_exhaust_heap(void)
+{
+    void *blocks[HEAP_SIZE / 10];
+    int count = 0;
+    size_t alloc_size = 100;
+
+    while(count < (int)(sizeof(blocks)/sizeof(blocks[0])))
+    {
+        blocks[count] = my_malloc(alloc_size);
+        if (blocks[count] == NULL)
+        {
+            break;
+        }
+        count++;
+    }
+
+    TEST_ASSERT_TRUE(count > 0);
+
+    TEST_ASSERT_NULL(my_malloc(alloc_size));
+
+    for (int i = 0; i < count; i++)
+    {
+        my_free(blocks[i]);
+    }
+}
+
+void test_invalid_free(void)
+{
+    int x;
+    my_free(&x);
+    TEST_ASSERT_TRUE(1);
+}
+
+void test_double_free(void)
+{
+    void *ptr1 = my_malloc(50);
+    TEST_ASSERT_NOT_NULL(ptr1);
+    my_free(ptr1);
+    my_free(ptr1);
+
+    void *ptr2 = my_malloc(10);
+    TEST_ASSERT_NOT_NULL(ptr2);
+    my_free(ptr2);
+
+    TEST_ASSERT_TRUE(1);
+}
+
 int main(void) {
     UNITY_BEGIN(); // Sets up Unity
 
@@ -256,6 +329,10 @@ int main(void) {
     RUN_TEST(test_malloc_fails_when_heap_too_small);
     RUN_TEST(test_free_null_pointer);
     RUN_TEST(test_malloc_zero_size);
+    RUN_TEST(test_fragmentation_scenario);
+    RUN_TEST(test_exhaust_heap);
+    RUN_TEST(test_invalid_free);
+    RUN_TEST(test_double_free);
 
     return UNITY_END(); // Reports the results
 }

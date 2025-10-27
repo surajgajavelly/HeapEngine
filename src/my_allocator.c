@@ -24,6 +24,17 @@
 
  // --- Helper Functions ---
 
+ /**
+  * @brief Checks if the given pointer is within the heap.
+  * 
+  * @param ptr 
+  * @return int 
+  */
+ static int is_within_heap(const void *ptr) 
+ {
+    return ptr != NULL && ((const char *)ptr >= heap) && ((const char *)ptr < heap + HEAP_SIZE);
+ }
+
 /**
  * @brief Finds the first free block large enough to hold 'size' bytes.
  * 
@@ -51,7 +62,7 @@ static BlockHeader *find_free_block(size_t size, BlockHeader **prev_out)
 
 static void split_and_prepare_block(BlockHeader *block_to_split, size_t requested_size, BlockHeader *prev)
 {
-   const size_t min_block_data_size = 8;
+   const size_t min_block_data_size = ALIGNMENT;
    const size_t min_block_total_size = sizeof(BlockHeader) + min_block_data_size;
 
    size_t original_block_size = block_to_split->size;
@@ -62,10 +73,12 @@ static void split_and_prepare_block(BlockHeader *block_to_split, size_t requeste
       new_free_block->size = original_block_size - requested_size - sizeof(BlockHeader);
       new_free_block->is_free = 1;
       new_free_block->next = block_to_split->next;
+      new_free_block->magic = BLOCK_MAGIC;
 
       block_to_split->size = requested_size;
       block_to_split->is_free = 0;
       block_to_split->next = NULL;
+      block_to_split->magic = BLOCK_MAGIC;
 
       if (prev)
       {
@@ -79,6 +92,7 @@ static void split_and_prepare_block(BlockHeader *block_to_split, size_t requeste
    else
    {
       block_to_split->is_free = 0;
+      block_to_split->magic = BLOCK_MAGIC;
 
       if (prev)
       {
@@ -134,7 +148,42 @@ static BlockHeader *coalesce_block(BlockHeader *block_to_free)
    return block_to_free;
  }
 
-// --- Core Allocator Functions ---
+
+void allocator_dump(void)
+{
+   printf("--- Heap Dump ---\n");
+   BlockHeader *current = (BlockHeader*)heap;
+   int block_num = 0;
+
+   while((char*)current < (heap + HEAP_SIZE))
+   {
+      printf("  Block %d @ %p | Header Size: %zu | Data Size: %zu | Free: %d | Next Free: %p\n",
+         block_num++,
+         (void*)current,
+         sizeof(BlockHeader),
+         current->size,
+         current->is_free,
+         (void*)current->next);
+
+      if (current->size == 0 && current->is_free)
+      {
+         printf("Warning: Encountered block with size 0, stopping dump.\n");
+         break;
+      }
+
+      BlockHeader *next = (BlockHeader*)((char*)(current + 1) + current->size);
+      if (next == current)
+      {
+         printf("Error: Block pointer did not advance, aborting.\n");
+         break;
+      }
+
+      current = next;
+   }
+
+   printf("--- End of Heap Dump ---\n");
+}
+ // --- Core Allocator Functions ---
 
 /**
  * @brief Initializes/resets the allocator.
@@ -147,6 +196,7 @@ static BlockHeader *coalesce_block(BlockHeader *block_to_free)
    free_list_head->size = HEAP_SIZE - sizeof(BlockHeader);
    free_list_head->is_free = 1;
    free_list_head->next = NULL;
+   free_list_head->magic = BLOCK_MAGIC;
  }
 
  /**
@@ -203,27 +253,45 @@ static BlockHeader *coalesce_block(BlockHeader *block_to_free)
       return;
    }
 
+   if (!is_within_heap(ptr)) {
+         fprintf(stderr, "Error: Attempting to free pointer %p outside heap bounds.\n", ptr);
+         return;
+    }
+
+    if ((uintptr_t)ptr % ALIGNMENT != 0) {
+         fprintf(stderr, "Error: Attempting to free unaligned pointer %p.\n", ptr);
+         return;
+     }
+
    void* offset_storage_ptr = (void*)((uintptr_t)ptr - sizeof(size_t));
+
+   if (!is_within_heap(offset_storage_ptr)) {
+         fprintf(stderr, "Error: Calculated offset storage pointer %p is out of heap bounds (original ptr: %p).\n", offset_storage_ptr, ptr);
+         return;
+     }
 
    size_t offset = *(size_t*)offset_storage_ptr;
 
-
-
    BlockHeader *block_to_free = (BlockHeader*)((char*)offset_storage_ptr - offset);
 
-   if(!block_to_free->is_free)
+   if (!is_within_heap(block_to_free) || block_to_free->magic != BLOCK_MAGIC) 
    {
-      block_to_free->is_free = 1;
+         uint32_t current_magic = is_within_heap(block_to_free) ? block_to_free->magic : 0;
+         fprintf(stderr, "Error: Invalid block header detected (addr: %p, magic: %x != %x) for pointer %p.\n",
+                 (void*)block_to_free, current_magic, BLOCK_MAGIC, ptr);
+         return;
+    }
 
-      block_to_free = coalesce_block(block_to_free);
-
-      block_to_free->next = free_list_head;
-      free_list_head = block_to_free;
-   }
-   else
+   if(block_to_free->is_free)
    {
-      
+      fprintf(stderr, "Error: Attempt to free a block that is already free.\n");
+      return;
    }
+
+   block_to_free->is_free = 1;
+   block_to_free = coalesce_block(block_to_free);
+   block_to_free->next = free_list_head;
+   free_list_head = block_to_free;
  }
 
  /**

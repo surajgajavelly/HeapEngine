@@ -13,10 +13,11 @@
  #define MY_ALLOCATOR_H
 
  #include <stddef.h> //For size_t
+ #include <stdint.h> //For uint32_t
 
  #define HEAP_SIZE (1024 * 10)
-
  #define ALIGNMENT 8
+ #define BLOCK_MAGIC 0xC0FFEE
 
  /**
   * @brief Metadata header for each memory block.
@@ -27,6 +28,7 @@
     size_t size;
     int is_free;
     struct BlockHeader *next;
+    uint32_t magic;
  } BlockHeader;
 
  /**
@@ -70,5 +72,11 @@
   * 
   */
  void *my_realloc(void *ptr, size_t size);
+
+ /**
+  * @brief Dumps the memory allocator's internal state to the console.
+  * 
+  */
+ void allocator_dump(void);
 
  #endif // MY_ALLOCATOR_H
