@@ -14,6 +14,7 @@
 
  #include <stddef.h> //For size_t
  #include <stdint.h> //For uint32_t
+ #include <stdbool.h> //For bool
 
  #define HEAP_SIZE (1024 * 10)
  #define ALIGNMENT 8
@@ -26,7 +27,7 @@
  typedef struct BlockHeader
  {
     size_t size;
-    int is_free;
+    bool is_free;
     struct BlockHeader *next;
     uint32_t magic;
  } BlockHeader;

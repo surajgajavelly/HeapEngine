@@ -14,6 +14,7 @@
  #include <stdint.h>
  #include <stdio.h>
  #include <string.h>
+ #include <stdbool.h>
 
  static char heap[HEAP_SIZE];
  static BlockHeader *free_list_head = NULL;
@@ -71,12 +72,12 @@ static void split_and_prepare_block(BlockHeader *block_to_split, size_t requeste
    {
       BlockHeader *new_free_block = (BlockHeader *)((char*)(block_to_split + 1) + requested_size);
       new_free_block->size = original_block_size - requested_size - sizeof(BlockHeader);
-      new_free_block->is_free = 1;
+      new_free_block->is_free = true;
       new_free_block->next = block_to_split->next;
       new_free_block->magic = BLOCK_MAGIC;
 
       block_to_split->size = requested_size;
-      block_to_split->is_free = 0;
+      block_to_split->is_free = false;
       block_to_split->next = NULL;
       block_to_split->magic = BLOCK_MAGIC;
 
@@ -91,7 +92,7 @@ static void split_and_prepare_block(BlockHeader *block_to_split, size_t requeste
    }
    else
    {
-      block_to_split->is_free = 0;
+      block_to_split->is_free = false;
       block_to_split->magic = BLOCK_MAGIC;
 
       if (prev)
@@ -194,7 +195,7 @@ void allocator_dump(void)
  {
    free_list_head = (BlockHeader*)heap;
    free_list_head->size = HEAP_SIZE - sizeof(BlockHeader);
-   free_list_head->is_free = 1;
+   free_list_head->is_free = true;
    free_list_head->next = NULL;
    free_list_head->magic = BLOCK_MAGIC;
  }
@@ -284,11 +285,11 @@ void allocator_dump(void)
 
    if(block_to_free->is_free)
    {
-      fprintf(stderr, "Error: Attempt to free a block that is already free.\n");
+      fprintf(stderr, "Warning: Double free detected for pointer %p (block @ %p).\n", ptr, (void*)block_to_free);
       return;
    }
 
-   block_to_free->is_free = 1;
+   block_to_free->is_free = true;
    block_to_free = coalesce_block(block_to_free);
    block_to_free->next = free_list_head;
    free_list_head = block_to_free;
