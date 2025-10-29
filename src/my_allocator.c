@@ -1,7 +1,7 @@
 /**
  * @file my_allocator.c 
- * @author Gajavelly Sai Suraj (you@domain.com)
- * @brief 
+ * @author Gajavelly Sai Suraj (saisurajgajavelly@gmail.com)
+ * @brief Implementation of a simple custom memory allocator.
  * @version 0.1
  * @date 2025-10-22
  * 
@@ -16,33 +16,32 @@
  #include <string.h>
  #include <stdbool.h>
 
- static char heap[HEAP_SIZE];
- static BlockHeader *free_list_head = NULL;
+ static char heap[HEAP_SIZE]; ///< The raw heap memory managed by the allocator.
 
-#ifndef ALIGNMENT
-#define ALIGNMENT 8
-#endif
+ static BlockHeader *free_list_head = NULL; ///< The head of the free list.
 
  // --- Helper Functions ---
 
  /**
   * @brief Checks if the given pointer is within the heap.
   * 
-  * @param ptr 
-  * @return int 
+  * @param ptr Pointer to validate.
+  * @return int Non-zero if the pointer is within the heap, zero otherwise.
   */
  static int is_within_heap(const void *ptr) 
  {
-    return ptr != NULL && ((const char *)ptr >= heap) && ((const char *)ptr < heap + HEAP_SIZE);
+   // Check if the pointer is within the heap.
+   const char *cptr = (const char *)ptr;
+   return ptr!= NULL && cptr >= heap && cptr < (heap + HEAP_SIZE);
  }
 
 /**
  * @brief Finds the first free block large enough to hold 'size' bytes.
  * 
- * @param size The minimum data size needed.
+ * @param size Minimum required size.
  * @param prev_out A pointer to a BlockHeader pointer, which will be updated
  * to a point to the block *before* the found block(or NULL if found block is the head).
- * @return A pointer to the found block's header, or NULL if no suitable block.
+ * @return Pointer to a suitable free block, or NULL if none found.
  */
 static BlockHeader *find_free_block(size_t size, BlockHeader **prev_out)
 {
@@ -61,70 +60,99 @@ static BlockHeader *find_free_block(size_t size, BlockHeader **prev_out)
    return NULL;
 }
 
+/**
+ * @brief Splits a free block to fit the requested size and prepare it for use.
+ * 
+ * @param block_to_split Block to split and prepare.
+ * @param requested_size Size of the requested block in bytes.
+ * @param prev Previous block in the free list.
+ */
 static void split_and_prepare_block(BlockHeader *block_to_split, size_t requested_size, BlockHeader *prev)
 {
+   // Minimum data size for a usable block after splitting.
    const size_t min_block_data_size = ALIGNMENT;
+
+   // Minimum total size for a usable block after splitting.
    const size_t min_block_total_size = sizeof(BlockHeader) + min_block_data_size;
 
-   size_t original_block_size = block_to_split->size;
+   size_t original_block_size = block_to_split->size; // Get original block size
 
+   // Check if splitting leaves enough space for a new free block.
    if ((original_block_size >= requested_size) && (original_block_size - requested_size >= min_block_total_size))
    {
+      // Calculate new header position.
       BlockHeader *new_free_block = (BlockHeader *)((char*)(block_to_split + 1) + requested_size);
+      // Setup new free block.
       new_free_block->size = original_block_size - requested_size - sizeof(BlockHeader);
       new_free_block->is_free = true;
-      new_free_block->next = block_to_split->next;
+      new_free_block->next = block_to_split->next; // Add to free list chain
       new_free_block->magic = BLOCK_MAGIC;
 
-      block_to_split->size = requested_size;
-      block_to_split->is_free = false;
-      block_to_split->next = NULL;
-      block_to_split->magic = BLOCK_MAGIC;
+      // Adjust original block.
+      block_to_split->size = requested_size; // Update block size
+      block_to_split->is_free = false;       
+      block_to_split->next = NULL;           // Remove from free list chain
+      block_to_split->magic = BLOCK_MAGIC; // Update the magic number
 
+      // Update free list links to insert new_free_block.
       if (prev)
       {
          prev->next = new_free_block;
       }
       else
       {
-         free_list_head = new_free_block;
+         free_list_head = new_free_block; // New block becomes head.
       }
    }
    else
    {
-      block_to_split->is_free = false;
-      block_to_split->magic = BLOCK_MAGIC;
 
+      // mark entire block as allocated.
+      block_to_split->is_free = false;
+      block_to_split->magic = BLOCK_MAGIC; // Update the magic number
+
+      // Remove from free list chain.
       if (prev)
       {
          prev->next = block_to_split->next;
       }
       else
       {
-         free_list_head = block_to_split->next;
+         free_list_head = block_to_split->next; // New block becomes head.
       }
 
-      block_to_split->next = NULL;
+      block_to_split->next = NULL; // Remove from free list chain
    }
-
 }
 
+/**
+ * @brief Coalesces adjacent free blocks.
+ * 
+ * If the next block in memory is free, merge them into a single larger block.
+ * 
+ * @param block_to_free Block to coalesce.
+ * @return BlockHeader* Pointer to the coalesced block.
+ */
 static BlockHeader *coalesce_block(BlockHeader *block_to_free)
  {
+   // Calculate the address of the expected next physical block's header.
    BlockHeader *next_block = (BlockHeader *)((char*)(block_to_free + 1) + block_to_free->size);
 
-   if((char*)next_block < (heap + HEAP_SIZE))
+   // Check if the next block is within the heap bounds.
+   if (is_within_heap(next_block))
    {
-      if(next_block->is_free)
+      // Check if the next physical block is valid (magic) and marked as free
+      if (next_block->magic == BLOCK_MAGIC && next_block->is_free)
       {
+         // Remove the next_block from the free list.
          BlockHeader *current = free_list_head;
          BlockHeader *prev = NULL;
 
-         while (current)
+         while (current != NULL)
          {
             if(current == next_block)
             {
-               if(prev)
+               if(prev != NULL)
                {
                   prev->next = current->next;
                }
@@ -138,61 +166,34 @@ static BlockHeader *coalesce_block(BlockHeader *block_to_free)
             current = current->next;
          }
 
-         if(free_list_head == next_block)
+         // Edge case: ensure head is NULL if next_block was the only item.
+         if (free_list_head == next_block)
          {
             free_list_head = NULL;
          }
 
+         // Merge the blocks.
          block_to_free->size += next_block->size + sizeof(BlockHeader);
       }
    }
+
+   // TODO: Implement backward coalescing.
+
+   // Return the block.
    return block_to_free;
  }
 
-
-void allocator_dump(void)
-{
-   printf("--- Heap Dump ---\n");
-   BlockHeader *current = (BlockHeader*)heap;
-   int block_num = 0;
-
-   while((char*)current < (heap + HEAP_SIZE))
-   {
-      printf("  Block %d @ %p | Header Size: %zu | Data Size: %zu | Free: %d | Next Free: %p\n",
-         block_num++,
-         (void*)current,
-         sizeof(BlockHeader),
-         current->size,
-         current->is_free,
-         (void*)current->next);
-
-      if (current->size == 0 && current->is_free)
-      {
-         printf("Warning: Encountered block with size 0, stopping dump.\n");
-         break;
-      }
-
-      BlockHeader *next = (BlockHeader*)((char*)(current + 1) + current->size);
-      if (next == current)
-      {
-         printf("Error: Block pointer did not advance, aborting.\n");
-         break;
-      }
-
-      current = next;
-   }
-
-   printf("--- End of Heap Dump ---\n");
-}
- // --- Core Allocator Functions ---
+ 
+// --- Core Allocator Functions ---
 
 /**
  * @brief Initializes/resets the allocator.
- * Sets up the entire heap as a single, large free block.
  * 
+ * Sets up the entire heap as a single, large free block.
  */
  void allocator_init(void) 
  {
+   // Setup free list.
    free_list_head = (BlockHeader*)heap;
    free_list_head->size = HEAP_SIZE - sizeof(BlockHeader);
    free_list_head->is_free = true;
@@ -203,8 +204,11 @@ void allocator_dump(void)
  /**
   * @brief Allocates 'size' bytes of uninitialized memory.
   * 
-  * @param size 
-  * @return void* 
+  * Aligns the request, finds a suitable free block, splits if needed, 
+  * and returns a pointer to the allocated memory.
+  * 
+  * @param size The number of bytes to allocate.
+  * @return void* Pointer to the allocated memory, or NULL if the request fails.
   */
  void *my_malloc(size_t size) {
 
@@ -212,40 +216,47 @@ void allocator_dump(void)
    {
       return NULL;
    }
-   
-   size_t requested_data_size = size;
 
-   size_t total_needed_in_block = requested_data_size + ALIGNMENT - 1 + sizeof(size_t);
+   size_t total_size = size + ALIGNMENT - 1 + sizeof(size_t);
 
+   // Find a suitable free block.
    BlockHeader *prev = NULL;
-   BlockHeader *block = find_free_block(total_needed_in_block, &prev);
-
+   BlockHeader *block = find_free_block(total_size, &prev);
    if(block == NULL)
    {
       return NULL;
    }
 
+   // Align the data pointer.
    void* raw_data_ptr = (void*)(block + 1);
    uintptr_t raw_addr = (uintptr_t)raw_data_ptr;
-
+   
+   // Calculate the aligned address after space for the offset storage.
    uintptr_t aligned_addr_with_offset = (raw_addr + sizeof(size_t) + ALIGNMENT - 1) & ~(uintptr_t)(ALIGNMENT - 1);
-   void* aligned_data_ptr = (void*)aligned_addr_with_offset;
-   void* offset_storage_ptr = (void*)(aligned_addr_with_offset - sizeof(size_t));
+   void* aligned_data_ptr = (void*)aligned_addr_with_offset; // Pointer to return to user.
+   void* offset_storage_ptr = (void*)(aligned_addr_with_offset - sizeof(size_t)); // Pointer to store offset.
 
-   size_t actual_used_data_size = (size_t)((char*)aligned_data_ptr + requested_data_size - (char*)raw_data_ptr);
+   // Calculate the actual size of the used data.
+   size_t actual_used_data_size = (size_t)((char*)aligned_data_ptr + size - (char*)raw_data_ptr);
 
-   split_and_prepare_block(block, actual_used_data_size, prev);
+   // Split the block if necessary.
+   split_and_prepare_block(block, actual_used_data_size, prev); 
 
+   // Calculate and store the offset.
    size_t offset = (size_t)((char*)offset_storage_ptr - (char*)block);
    *(size_t*)offset_storage_ptr = offset;
 
+   // Return the aligned data pointer.
    return aligned_data_ptr;
  }
 
  /**
-  * @brief 
+  * @brief Frees a block of memory previously allocated by my_malloc.
   * 
-  * @param ptr 
+  * Validates the pointer, marks the block free, coalesces with neighbor,
+  * and reinserts into the free list.
+  * 
+  * @param ptr A pointer to the memory block to be freed.
   */
  void my_free(void *ptr) 
  {
@@ -254,27 +265,26 @@ void allocator_dump(void)
       return;
    }
 
-   if (!is_within_heap(ptr)) {
-         fprintf(stderr, "Error: Attempting to free pointer %p outside heap bounds.\n", ptr);
-         return;
-    }
+   // Basic boundary and alignment checks on user pointer.
+   if (!is_within_heap(ptr) || ((uintptr_t)ptr % ALIGNMENT != 0)) 
+   {
+      fprintf(stderr, "Error: Attempting to free invalid pointer %p.\n", ptr);
+      return;
+   }
 
-    if ((uintptr_t)ptr % ALIGNMENT != 0) {
-         fprintf(stderr, "Error: Attempting to free unaligned pointer %p.\n", ptr);
-         return;
-     }
-
+   // Find offset storage location and check its bounds.
    void* offset_storage_ptr = (void*)((uintptr_t)ptr - sizeof(size_t));
+   if (!is_within_heap(offset_storage_ptr)) 
+   {
+      fprintf(stderr, "Error: Calculated offset storage pointer %p is out of heap bounds (original ptr: %p).\n", offset_storage_ptr, ptr);
+      return;
+   }
 
-   if (!is_within_heap(offset_storage_ptr)) {
-         fprintf(stderr, "Error: Calculated offset storage pointer %p is out of heap bounds (original ptr: %p).\n", offset_storage_ptr, ptr);
-         return;
-     }
-
+   // Read offset and calculate header address.
    size_t offset = *(size_t*)offset_storage_ptr;
-
    BlockHeader *block_to_free = (BlockHeader*)((char*)offset_storage_ptr - offset);
 
+   // 5. Validate header (bounds and magic number)
    if (!is_within_heap(block_to_free) || block_to_free->magic != BLOCK_MAGIC) 
    {
          uint32_t current_magic = is_within_heap(block_to_free) ? block_to_free->magic : 0;
@@ -283,14 +293,20 @@ void allocator_dump(void)
          return;
     }
 
+    // Check for double free
    if(block_to_free->is_free)
    {
       fprintf(stderr, "Warning: Double free detected for pointer %p (block @ %p).\n", ptr, (void*)block_to_free);
       return;
    }
 
+   // mark the block as free
    block_to_free->is_free = true;
+
+   // Coalesce with neighbors.
    block_to_free = coalesce_block(block_to_free);
+
+   // Add the block to the free list.
    block_to_free->next = free_list_head;
    free_list_head = block_to_free;
  }
@@ -303,24 +319,28 @@ void allocator_dump(void)
   * @param size Size of the each element.
   * @return void* Pointer to allocated zeroed memory, or NULL on failure/overflow.
   */
- void *my_calloc(size_t nmemb, size_t size) {
+ void *my_calloc(size_t nmemb, size_t size) 
+ {
 
+   // Check for invalid input.
    if (nmemb == 0 || size == 0)
    {
       return NULL;
    }
 
+   // Check for multiplication overflow before calculating total size.
    size_t total_size;
-
-   if (size > SIZE_MAX / nmemb)
+   if (size != 0 && nmemb > SIZE_MAX / size)
    {
       return NULL;
    }
 
    total_size = nmemb * size;
 
+   // Allocate memory using my_malloc.
    void *ptr = my_malloc(total_size);
 
+   // Initialize the allocated memory to zero.
    if (ptr != NULL)
    {
       memset(ptr, 0, total_size);
