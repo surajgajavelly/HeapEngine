@@ -1,9 +1,9 @@
 /**
  * @file test_main.c
- * @author your name (you@domain.com)
- * @brief 
- * @version 0.1
- * @date 2025-10-22
+ * @author Gajavelly Sai Suraj (saisurajgajavelly@gmail.com)
+ * @brief Unit tests for the custom memory allocator.
+ * @version 1.0
+ * @date 2025-10-29
  * 
  * @copyright Copyright (c) 2025
  * 
@@ -16,39 +16,33 @@
 #include <string.h>
 #include <limits.h>
 
-#define ALIGNMENT 8
+#define ALIGNMENT 8 
+
+// --- Test Setup ---
 
 void setUp(void) 
 {
     allocator_init();
 }
 
-void tearDown(void) {
+void tearDown(void) 
+{
     
 }
 
+// --- Malloc Tests ---
+
+/**
+ * @brief Verifies that my_malloc returns a non-null pointer.
+ */
 void test_malloc_basic_should_return_non_null(void) {
     void *ptr = my_malloc(10);
     TEST_ASSERT_NOT_NULL(ptr);
-}
-
-void test_free_should_reuse_memory(void)
-{
-    void *ptr1 = my_malloc(10);
-    TEST_ASSERT_NOT_NULL(ptr1);
-
-    my_free(ptr1);
-
-    void *ptr2 = my_malloc(10);
-    TEST_ASSERT_NOT_NULL(ptr2);
-
-    TEST_ASSERT_EQUAL_PTR(ptr1, ptr2);
+    my_free(ptr);
 }
 
 /**
- * @brief 
- * 
- * @return int 
+ * @brief Verifies that my_malloc splits larger free blocks.
  */
 void test_malloc_should_split_large_block(void)
 {
@@ -57,34 +51,23 @@ void test_malloc_should_split_large_block(void)
 
     void *ptr2 = my_malloc(500);
     TEST_ASSERT_NOT_NULL(ptr2);
+
+    my_free(ptr1);
+    my_free(ptr2);
 }
 
-void test_free_should_coalesce_adjacent_blocks(void)
-{
-    void *ptr_A = my_malloc(50);
-    TEST_ASSERT_NOT_NULL(ptr_A);
-
-    void *ptr_B = my_malloc(60);
-    TEST_ASSERT_NOT_NULL(ptr_B);
-
-    void *ptr_C = my_malloc(70);
-    TEST_ASSERT_NOT_NULL(ptr_C);
-
-    my_free(ptr_B);
-    my_free(ptr_A);
-
-    size_t size_D = 100;
-    void *ptr_D = my_malloc(size_D);
-
-    TEST_ASSERT_NOT_NULL(ptr_D);
-
-    TEST_ASSERT_EQUAL_PTR(ptr_A, ptr_D);
-}
-
+/**
+ * @brief Verifies that my_malloc returns aligned memory.
+ */
 void test_malloc_should_return_aligned_memory(void)
 {
     const int num_allocs = 5;
     void *pointers[num_allocs];
+
+    for(int i = 0; i < num_allocs; i++)
+    {
+        pointers[i] = NULL;
+    }
 
     for(int i = 0; i < num_allocs; i++)
     {
@@ -104,6 +87,113 @@ void test_malloc_should_return_aligned_memory(void)
     }
 }
 
+/**
+ * @brief Verifies that requesting zero bytes returns NULL.
+ */
+void test_malloc_zero_size(void)
+{
+    void *ptr = my_malloc(0);
+    TEST_ASSERT_NULL(ptr);
+}
+
+/**
+ * @brief Verifies failure when requesting more memory than available.
+ */
+void test_malloc_fails_when_heap_too_small(void)
+{
+    size_t too_large_size = HEAP_SIZE - sizeof(BlockHeader) + 1;
+    void *ptr = my_malloc(too_large_size);
+    TEST_ASSERT_NULL(ptr);
+}
+
+// --- Free Tests ---
+
+/**
+ * @brief Verifies that freed memory can be reused.
+ */
+void test_free_should_reuse_memory(void)
+{
+    void *ptr1 = my_malloc(10);
+    TEST_ASSERT_NOT_NULL(ptr1);
+
+    my_free(ptr1);
+
+    void *ptr2 = my_malloc(10);
+    TEST_ASSERT_NOT_NULL(ptr2);
+
+    TEST_ASSERT_EQUAL_PTR(ptr1, ptr2);
+
+    my_free(ptr2);
+}
+
+/**
+ * @brief Verifies that my_free coalesces adjacent blocks.
+ */
+void test_free_should_coalesce_adjacent_blocks(void)
+{
+    void *ptr1 = my_malloc(50);
+    TEST_ASSERT_NOT_NULL(ptr1);
+
+    void *ptr2 = my_malloc(60);
+    TEST_ASSERT_NOT_NULL(ptr2);
+
+    void *ptr3= my_malloc(70);
+    TEST_ASSERT_NOT_NULL(ptr3);
+
+    my_free(ptr2);
+    my_free(ptr1);
+
+    size_t size4 = 100;
+    void *ptr4 = my_malloc(size4);
+
+    TEST_ASSERT_NOT_NULL(ptr4);
+    TEST_ASSERT_EQUAL_PTR(ptr1, ptr4);
+
+    my_free(ptr3);
+    my_free(ptr4);
+}
+
+/**
+ * @brief Verifies that freeing a NULL pointer is safe.
+ */
+void test_free_null_pointer(void)
+{
+    my_free(NULL);
+    TEST_ASSERT_TRUE(true);
+}
+
+/**
+ * @brief Verifies freeing a pointer not allocated by my_malloc is handled safely.
+ */
+void test_invalid_free(void)
+{
+    int stack_var;
+    my_free(&stack_var);
+    TEST_ASSERT_TRUE(true);
+}
+
+/**
+ * @brief Verifies freeing the same pointer twice is handled safely.
+ */
+void test_double_free(void)
+{
+    void *ptr1 = my_malloc(50);
+    TEST_ASSERT_NOT_NULL(ptr1);
+    my_free(ptr1);
+    my_free(ptr1);
+
+    void *ptr2 = my_malloc(10);
+    TEST_ASSERT_NOT_NULL(ptr2);
+    my_free(ptr2);
+
+    TEST_ASSERT_TRUE(true);
+}
+
+// --- Calloc Tests ---
+
+/**
+ * @brief Verifies calloc allocates and returns zeroed memory.
+ */
 void test_calloc_should_return_zeroed_memory(void)
 {
     size_t num_elements = 15;
@@ -117,26 +207,32 @@ void test_calloc_should_return_zeroed_memory(void)
     }
 
     int *ptr = (int*)my_calloc(num_elements, element_size);
-
     TEST_ASSERT_NOT_NULL(ptr);
 
     unsigned char zero_buffer[total_size];
     memset(zero_buffer, 0, total_size);
-    TEST_ASSERT_EQUAL_INT(0, memcmp(ptr, zero_buffer, total_size));
+    TEST_ASSERT_EQUAL_MEMORY(ptr, zero_buffer, total_size);
 
     my_free(ptr);
 }
 
+/**
+ * @brief Verifies calloc returns NULL if size calculation overflows.
+ */
 void test_calloc_should_fail_on_overflow(void)
 {
     size_t large_num = SIZE_MAX / 2 + 2;
     size_t size = 2;
 
     void *ptr = my_calloc(large_num, size);
-
     TEST_ASSERT_NULL(ptr);
 }
 
+// --- Realloc Tests ---
+
+/**
+ * @brief Verifies realloc(NULL, size) behaves like malloc(size).
+ */
 void test_realloc_null_ptr_acts_like_malloc(void)
 {
    size_t size = 50;
@@ -149,6 +245,9 @@ void test_realloc_null_ptr_acts_like_malloc(void)
    my_free(ptr);
 }
 
+/**
+ * @brief Verifies realloc(ptr, 0) behaves like free(ptr).
+ */
 void test_realloc_zero_size_acts_like_free(void)
 {
    size_t intitial_size = 50;
@@ -166,6 +265,9 @@ void test_realloc_zero_size_acts_like_free(void)
 
 }
 
+/**
+ * @brief Verifies realloc can shrink an allocation (in-place).
+ */
 void test_realloc_should_shrink_block(void)
 {
     size_t initial_size = 100;
@@ -188,6 +290,9 @@ void test_realloc_should_shrink_block(void)
     my_free(shrunk_ptr);
 }
 
+/**
+ * @brief Verifies realloc growing a block requires moving and preserves data.
+ */
 void test_realloc_grow_block_new_location(void)
 {
     size_t initial_size = 50;
@@ -216,28 +321,11 @@ void test_realloc_grow_block_new_location(void)
     
 }
 
-void test_malloc_fails_when_heap_too_small(void)
-{
-    size_t too_large_size = HEAP_SIZE - sizeof(BlockHeader) + 1;
+// --- Scenario Tests ---
 
-    void *ptr = my_malloc(too_large_size);
-
-    TEST_ASSERT_NULL(ptr);
-}
-
-void test_free_null_pointer(void)
-{
-    my_free(NULL);
-
-    TEST_ASSERT_TRUE(1);
-}
-
-void test_malloc_zero_size(void)
-{
-    void *ptr = my_malloc(0);
-    TEST_ASSERT_NULL(ptr);
-}
-
+/**
+ * @brief Tests a specific sequence of alloc/free to check fragmentation/coalescing.
+ */
 void test_fragmentation_scenario(void)
 {
     void *a = my_malloc(100);
@@ -264,11 +352,14 @@ void test_fragmentation_scenario(void)
     my_free(e);
 }
 
+/**
+ * @brief Tests allocating repeatedly until the heap is exhausted.
+ */
 void test_exhaust_heap(void)
 {
-    void *blocks[HEAP_SIZE / 10];
+    void *blocks[HEAP_SIZE / (sizeof(BlockHeader) + ALIGNMENT + 10)];
     int count = 0;
-    size_t alloc_size = 100;
+    size_t alloc_size = 10;
 
     while(count < (int)(sizeof(blocks)/sizeof(blocks[0])))
     {
@@ -281,7 +372,6 @@ void test_exhaust_heap(void)
     }
 
     TEST_ASSERT_TRUE(count > 0);
-
     TEST_ASSERT_NULL(my_malloc(alloc_size));
 
     for (int i = 0; i < count; i++)
@@ -290,49 +380,40 @@ void test_exhaust_heap(void)
     }
 }
 
-void test_invalid_free(void)
-{
-    int x;
-    my_free(&x);
-    TEST_ASSERT_TRUE(1);
-}
-
-void test_double_free(void)
-{
-    void *ptr1 = my_malloc(50);
-    TEST_ASSERT_NOT_NULL(ptr1);
-    my_free(ptr1);
-    my_free(ptr1);
-
-    void *ptr2 = my_malloc(10);
-    TEST_ASSERT_NOT_NULL(ptr2);
-    my_free(ptr2);
-
-    TEST_ASSERT_TRUE(1);
-}
-
+/**
+ * @brief Main function to run all unit tests.
+ * 
+ */
 int main(void) {
     UNITY_BEGIN(); // Sets up Unity
 
-    // Run our tests
+    // --- Malloc Tests ---
     RUN_TEST(test_malloc_basic_should_return_non_null);
-    RUN_TEST(test_free_should_reuse_memory);
     RUN_TEST(test_malloc_should_split_large_block);
-    RUN_TEST(test_free_should_coalesce_adjacent_blocks);
     RUN_TEST(test_malloc_should_return_aligned_memory);
+    RUN_TEST(test_malloc_zero_size);
+    RUN_TEST(test_malloc_fails_when_heap_too_small);
+
+    // --- Free Tests ---
+    RUN_TEST(test_free_should_reuse_memory);
+    RUN_TEST(test_free_should_coalesce_adjacent_blocks);
+    RUN_TEST(test_free_null_pointer);
+    RUN_TEST(test_invalid_free);
+    RUN_TEST(test_double_free);
+
+    // --- Calloc Tests ---
     RUN_TEST(test_calloc_should_return_zeroed_memory);
     RUN_TEST(test_calloc_should_fail_on_overflow);
+
+    // --- Realloc Tests ---
     RUN_TEST(test_realloc_null_ptr_acts_like_malloc);
     RUN_TEST(test_realloc_zero_size_acts_like_free);
     RUN_TEST(test_realloc_should_shrink_block);
     RUN_TEST(test_realloc_grow_block_new_location);
-    RUN_TEST(test_malloc_fails_when_heap_too_small);
-    RUN_TEST(test_free_null_pointer);
-    RUN_TEST(test_malloc_zero_size);
+    
+    // --- Scenario Tests ---
     RUN_TEST(test_fragmentation_scenario);
     RUN_TEST(test_exhaust_heap);
-    RUN_TEST(test_invalid_free);
-    RUN_TEST(test_double_free);
 
     return UNITY_END(); // Reports the results
 }

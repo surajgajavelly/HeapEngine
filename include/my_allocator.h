@@ -6,8 +6,8 @@
  * A simple heap allocator providing malloc, calloc, realloc, and free 
  * equivalents, along with debugging utilities.
  * 
- * @version 0.1
- * @date 2025-10-23
+ * @version 1.0
+ * @date 2025-10-29
  * 
  * @copyright Copyright (c) 2025
  *  
@@ -84,10 +84,10 @@
   * @brief Changes the size of the memory block pointed to by 'ptr' to 'size' bytes.
   * 
   * @param ptr pointer to the memory block to be resized.
-  * @param size The new size for the memory block.
+  * @param new_size The new size for the memory block.
   * @return A pointer to the resized memory block, or NULL if the request fails.
   * 
   */
- void *my_realloc(void *ptr, size_t size);
+ void *my_realloc(void *ptr, size_t new_size);
 
  #endif // MY_ALLOCATOR_H

@@ -2,8 +2,8 @@
  * @file my_allocator.c 
  * @author Gajavelly Sai Suraj (saisurajgajavelly@gmail.com)
  * @brief Implementation of a simple custom memory allocator.
- * @version 0.1
- * @date 2025-10-22
+ * @version 1.0
+ * @date 2025-10-29
  * 
  * @copyright Copyright (c) 2025
  * 
@@ -207,7 +207,6 @@ static BlockHeader *coalesce_block(BlockHeader *block_to_free)
   * Aligns the request, finds a suitable free block, splits if needed, 
   * and returns a pointer to the allocated memory.
   * 
-  * @param size The number of bytes to allocate.
   * @return void* Pointer to the allocated memory, or NULL if the request fails.
   */
  void *my_malloc(size_t size) {
@@ -255,8 +254,6 @@ static BlockHeader *coalesce_block(BlockHeader *block_to_free)
   * 
   * Validates the pointer, marks the block free, coalesces with neighbor,
   * and reinserts into the free list.
-  * 
-  * @param ptr A pointer to the memory block to be freed.
   */
  void my_free(void *ptr) 
  {
@@ -315,8 +312,6 @@ static BlockHeader *coalesce_block(BlockHeader *block_to_free)
   * @brief Allocates memory for an array of nmembq elements of size bytes each
   * and initializes all bits to zero.
   * 
-  * @param nmemb Number of elements.
-  * @param size Size of the each element.
   * @return void* Pointer to allocated zeroed memory, or NULL on failure/overflow.
   */
  void *my_calloc(size_t nmemb, size_t size) 
@@ -352,38 +347,53 @@ static BlockHeader *coalesce_block(BlockHeader *block_to_free)
  /**
   * @brief Changes the size of the memory block pointed to by 'ptr' to 'size' bytes.
   * 
-  * @param ptr Pointer to the memory block to be resize, or NULL.
-  * @param size The new size for the memory block, in bytes.
   * @return void* Pointer to the resized memory block, or NULL if fails.
   */
  void *my_realloc(void *ptr, size_t new_size) {
 
+   // If ptr is NULL, behave like malloc(new_size)
    if (ptr == NULL)
    {
       return my_malloc(new_size);
    }
 
+   // If new_size is 0, behave like free(ptr) and return NULL
    if (new_size == 0)
    {
       my_free(ptr);
       return NULL;
    }
 
-   void *offset_storage_ptr = (void*)((uintptr_t)ptr - sizeof(size_t));
+   // Find the original block header using the offset
+   void *offset_ptr = (void*)((uintptr_t)ptr - sizeof(size_t));
 
-   size_t offset = *(size_t*)offset_storage_ptr;
+   // Basic bound check before dereferencing offset_ptr
+   if (!is_within_heap(offset_ptr)) 
+   {
+      fprintf(stderr, "Error(realloc): Offset pointer %p out of bounds for user ptr %p.\n", offset_ptr, ptr);
+      return NULL;
+   }
 
-   BlockHeader *old_block_header = (BlockHeader*)((char*)offset_storage_ptr - offset);
+   size_t offset = *(size_t*)offset_ptr;
+   BlockHeader *old_block_header = (BlockHeader*)((char*)offset_ptr - offset);
 
-   size_t old_data_size = old_block_header->size;
+   // Validate the retrieved header (crucial before reading size or freeing)
+   if (!is_within_heap(old_block_header) || old_block_header->magic != BLOCK_MAGIC || old_block_header->is_free) 
+   {
+      fprintf(stderr, "Error(realloc): Invalid header found for ptr %p.\n", ptr);
+      return NULL;
+   }
 
+   size_t old_data_size = old_block_header->size; // Usable data size.
+
+   // Handle shrinking or same size: return original pointer
    if (new_size <= old_data_size)
    {
       return ptr;
    }
 
+   // Allocate new block
    void *new_ptr = my_malloc(new_size);
-
    if (new_ptr == NULL)
    {
       return NULL;
@@ -391,10 +401,13 @@ static BlockHeader *coalesce_block(BlockHeader *block_to_free)
 
    size_t copy_size = (new_size > old_data_size) ? old_data_size : new_size;
 
-   memcpy(new_ptr, ptr, copy_size);
+   // Copy the data from the old block to the new block.
+   memcpy(new_ptr, ptr, old_data_size);
 
+   // Free the original block.
    my_free(ptr);
 
+   // Return the pointer to the new block.
    return new_ptr;
 
  }
