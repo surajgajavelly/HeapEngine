@@ -67,7 +67,7 @@ void test_malloc_should_return_aligned_memory(void) {
         TEST_ASSERT_NOT_NULL(pointers[i]);
 
         uintptr_t address = (uintptr_t) pointers[i];
-        TEST_ASSERT_EQUAL_INT(0, address % ALIGNMENT);
+        TEST_ASSERT_EQUAL_UINT(0, address % ALIGNMENT);
     }
 
     for (int i = 0; i < num_allocs; i++) {

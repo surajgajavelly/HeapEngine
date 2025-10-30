@@ -27,8 +27,14 @@ jobs:
         git diff --exit-code --color || (echo "Code is not formatted. Run clang-format." && exit 1)
 
     - name: Run cppcheck (Static Analysis)
-      # Scan all code, but suppress errors from missing system/vendored headers
-      run: cppcheck --enable=all --error-exitcode=1 --suppress=missingIncludeSystem .
+      run: |
+        # -I: Add include paths
+        # --exclude: Ignore third-party vendor code
+        cppcheck --enable=all --error-exitcode=1 \
+          -I include \
+          -I vendor/unity \
+          --exclude=vendor \
+          .
 
     - name: Configure CMake
       run: cmake -S . -B build

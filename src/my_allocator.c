@@ -128,7 +128,7 @@ static void split_and_prepare_block(BlockHeader *block_to_split,
  */
 static BlockHeader *coalesce_block(BlockHeader *block_to_free) {
     // Calculate the address of the expected next physical block's header.
-    BlockHeader *next_block =
+    const BlockHeader *next_block =
         (BlockHeader *) ((char *) (block_to_free + 1) + block_to_free->size);
 
     // Check if the next block is within the heap bounds.
@@ -314,7 +314,7 @@ void *my_calloc(size_t nmemb, size_t size) {
 
     // Check for multiplication overflow before calculating total size.
     size_t total_size;
-    if (size != 0 && nmemb > SIZE_MAX / size) {
+    if (nmemb > SIZE_MAX / size) {
         return NULL;
     }
 
@@ -363,7 +363,7 @@ void *my_realloc(void *ptr, size_t new_size) {
     }
 
     size_t offset = *(size_t *) offset_ptr;
-    BlockHeader *old_block_header =
+    const BlockHeader *old_block_header =
         (BlockHeader *) ((char *) offset_ptr - offset);
 
     // Validate the retrieved header (crucial before reading size or freeing)
