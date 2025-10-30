@@ -233,7 +233,7 @@ void test_realloc_zero_size_acts_like_free(void) {
     void *ptr1 = my_malloc(intitial_size);
     TEST_ASSERT_NOT_NULL(ptr1);
 
-   const void *ptr2 = my_realloc(ptr1, 0);
+    const void *ptr2 = my_realloc(ptr1, 0);
     TEST_ASSERT_NULL(ptr2);
 
     void *ptr3 = my_malloc(intitial_size);
