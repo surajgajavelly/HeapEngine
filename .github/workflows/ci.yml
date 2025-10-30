@@ -11,29 +11,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential cmake clang-format cppcheck check valgrind
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        # Removed 'check', as we are using vendored Unity
+        sudo apt-get install -y build-essential cmake clang-format cppcheck valgrind
 
-      - name: Run clang-format (Check Style)
-        run: |
-          find . -type f -name "*.c" -o -name "*.h" | xargs clang-format -i
-          git diff --exit-code --color || (echo "Code is not formatted. Run clang-format." && exit 1)
+    - name: Run clang-format (Check Style)
+      run: |
+        # Find all .c and .h files, but exclude the ./vendor/ path
+        find . -type f \( -name "*.h" -o -name "*.c" \) -not -path "./vendor/*" | xargs clang-format -i
+        git diff --exit-code --color || (echo "Code is not formatted. Run clang-format." && exit 1)
 
-      - name: Run cppcheck (Static Analysis)
-        run: cppcheck --enable=all --error-exitcode=1 --suppress=missingIncludeSystem .
+    - name: Run cppcheck (Static Analysis)
+      # Scan all code, but suppress errors from missing system/vendored headers
+      run: cppcheck --enable=all --error-exitcode=1 --suppress=missingIncludeSystem .
 
-      - name: Configure CMake
-        run: cmake -S . -B build
+    - name: Configure CMake
+      run: cmake -S . -B build
 
-      - name: Build project
-        run: cmake --build build
+    - name: Build project
+      run: cmake --build build
 
-      - name: Run tests with valgrind (Memory Leak Check)
-        run: |
-          cd build
-          valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --error-exitcode=1 .run_tests
+    - name: Run Tests and Demo with Valgrind (Memory Check)
+      run: |
+        cd build
+        # 1. Run unit tests under Valgrind
+        valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --error-exitcode=1 ./tests/run_tests
+        # 2. Run demo app under Valgrind
+        valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --error-exitcode=1 ./demo/allocator_demo
