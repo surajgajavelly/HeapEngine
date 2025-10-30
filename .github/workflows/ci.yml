@@ -33,10 +33,11 @@ jobs:
         cppcheck --enable=all --error-exitcode=1 \
           -I include \
           -I vendor/unity \
-          src \
-          include \
-          demo \
-          tests \
+          --suppress=missingIncludeSystem \
+          --suppress=unusedFunction:tests/test_main.c \
+          --suppress=nullPointerRedundantCheck:tests/test_main.c \
+          --suppress=*:vendor/unity/* \
+          src include demo tests
 
     - name: Configure CMake
       run: cmake -S . -B build

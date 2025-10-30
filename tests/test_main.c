@@ -81,7 +81,7 @@ void test_malloc_should_return_aligned_memory(void) {
  * @brief Verifies that requesting zero bytes returns NULL.
  */
 void test_malloc_zero_size(void) {
-    void *ptr = my_malloc(0);
+    const void *ptr = my_malloc(0);
     TEST_ASSERT_NULL(ptr);
 }
 
@@ -90,7 +90,7 @@ void test_malloc_zero_size(void) {
  */
 void test_malloc_fails_when_heap_too_small(void) {
     size_t too_large_size = HEAP_SIZE - sizeof(BlockHeader) + 1;
-    void *ptr = my_malloc(too_large_size);
+    const void *ptr = my_malloc(too_large_size);
     TEST_ASSERT_NULL(ptr);
 }
 
@@ -183,7 +183,7 @@ void test_calloc_should_return_zeroed_memory(void) {
     size_t element_size = sizeof(int);
     size_t total_size = num_elements * element_size;
 
-    if (num_elements > 0 && element_size > SIZE_MAX / num_elements) {
+    if (element_size > SIZE_MAX / num_elements) {
         TEST_FAIL_MESSAGE("Test setup error: Size calculation would overflow.");
         return;
     }
@@ -205,7 +205,7 @@ void test_calloc_should_fail_on_overflow(void) {
     size_t large_num = SIZE_MAX / 2 + 2;
     size_t size = 2;
 
-    void *ptr = my_calloc(large_num, size);
+    const void *ptr = my_calloc(large_num, size);
     TEST_ASSERT_NULL(ptr);
 }
 
@@ -233,7 +233,7 @@ void test_realloc_zero_size_acts_like_free(void) {
     void *ptr1 = my_malloc(intitial_size);
     TEST_ASSERT_NOT_NULL(ptr1);
 
-    void *ptr2 = my_realloc(ptr1, 0);
+   const void *ptr2 = my_realloc(ptr1, 0);
     TEST_ASSERT_NULL(ptr2);
 
     void *ptr3 = my_malloc(intitial_size);
