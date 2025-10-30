@@ -29,12 +29,14 @@ jobs:
     - name: Run cppcheck (Static Analysis)
       run: |
         # -I: Add include paths
-        # --exclude: Ignore third-party vendor code
+        # Explicitly check only our source/test directories
         cppcheck --enable=all --error-exitcode=1 \
           -I include \
           -I vendor/unity \
-          --exclude=vendor \
-          .
+          src \
+          include \
+          demo \
+          tests \
 
     - name: Configure CMake
       run: cmake -S . -B build
