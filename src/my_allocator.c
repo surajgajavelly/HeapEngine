@@ -399,8 +399,6 @@ static BlockHeader *coalesce_block(BlockHeader *block_to_free)
       return NULL;
    }
 
-   size_t copy_size = (new_size > old_data_size) ? old_data_size : new_size;
-
    // Copy the data from the old block to the new block.
    memcpy(new_ptr, ptr, old_data_size);
 
