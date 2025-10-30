@@ -36,6 +36,7 @@ jobs:
           --suppress=missingIncludeSystem \
           --suppress=unusedFunction:tests/test_main.c \
           --suppress=nullPointerRedundantCheck:tests/test_main.c \
+          --suppress=toomanyconfigs \
           --suppress=*:vendor/unity/* \
           src demo tests
 
