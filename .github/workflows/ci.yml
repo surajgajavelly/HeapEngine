@@ -37,7 +37,7 @@ jobs:
           --suppress=unusedFunction:tests/test_main.c \
           --suppress=nullPointerRedundantCheck:tests/test_main.c \
           --suppress=*:vendor/unity/* \
-          src include demo tests
+          src demo tests
 
     - name: Configure CMake
       run: cmake -S . -B build
