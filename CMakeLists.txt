@@ -36,4 +36,7 @@ add_subdirectory(src)
 # TODO: Add an option to enable/disable tests
 add_subdirectory(tests)
 
+# This will build our demo
+add_subdirectory(demo)
+
 
