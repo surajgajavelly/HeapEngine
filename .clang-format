@@ -1,6 +1,5 @@
 ---
 BasedOnStyle: LLVM
-Language: C
 IndentWidth: 4
 TabWidth: 4
 UseTab: Never
@@ -21,5 +20,4 @@ IndentCaseLabels: true
 PointerAlignment: Right
 SpaceAfterCStyleCast: true
 SpaceBeforeParens: ControlStatements
-SpaceInParentheses: false
 ...

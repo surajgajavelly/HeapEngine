@@ -1,0 +1,55 @@
+name: C Project CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        # Removed 'check', as we are using vendored Unity
+        sudo apt-get install -y build-essential cmake clang-format cppcheck valgrind
+
+    - name: Run clang-format (Check Style)
+      run: |
+        # Find all .c and .h files, but exclude the ./vendor/ path
+        find . -type f \( -name "*.h" -o -name "*.c" \) -not -path "./vendor/*" | xargs clang-format -i
+        git diff --exit-code --color || (echo "Code is not formatted. Run clang-format." && exit 1)
+
+    - name: Run cppcheck (Static Analysis)
+      run: |
+        # -I: Add include paths
+        # Explicitly check only our source/test directories
+        cppcheck --enable=all --error-exitcode=1 \
+          -I include \
+          -I vendor/unity \
+          --suppress=missingIncludeSystem \
+          --suppress=unusedFunction:tests/test_main.c \
+          --suppress=nullPointerRedundantCheck:tests/test_main.c \
+          --suppress=toomanyconfigs \
+          --suppress=*:vendor/unity/* \
+          src demo tests
+
+    - name: Configure CMake
+      run: cmake -S . -B build
+
+    - name: Build project
+      run: cmake --build build
+
+    - name: Run Tests and Demo with Valgrind (Memory Check)
+      run: |
+        cd build
+        # 1. Run unit tests under Valgrind
+        valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --error-exitcode=1 ./tests/run_tests
+        # 2. Run demo app under Valgrind
+        valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --error-exitcode=1 ./demo/allocator_demo
