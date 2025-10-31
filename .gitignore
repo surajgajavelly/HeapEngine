@@ -17,3 +17,6 @@
 
 # VSCode local settings
 /.vscode/
+
+# Ignore Windows Zone.Identifier files
+*:Zone.Identifier
