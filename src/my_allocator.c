@@ -222,10 +222,13 @@ void allocator_init(void) {
     heap_size = HEAP_SIZE;
 #endif
 
-    if (heap == NULL || heap_size == 0) {
+#if HEAP_BACKEND == HEAP_BACKEND_SBRK || HEAP_BACKEND == HEAP_BACKEND_MMAP
+    if (heap == NULL || heap_size == 0)
+    {
         free_list_head = NULL;
         return;
     }
+#endif
 
     // Setup free list.
     free_list_head = (BlockHeader *) heap;
