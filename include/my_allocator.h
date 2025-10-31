@@ -109,4 +109,10 @@ void *my_calloc(size_t nmemb, size_t size);
  */
 void *my_realloc(void *ptr, size_t new_size);
 
+/**
+ * @brief (V2.0) Cleans up the allocator, unmapping memory if necessary.
+ * 
+ */
+void allocator_destroy(void);
+
 #endif // MY_ALLOCATOR_H
