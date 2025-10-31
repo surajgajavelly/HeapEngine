@@ -42,10 +42,18 @@ static BlockHeader *free_list_head = NULL;
  */
 static int is_within_heap(const void *ptr) {
     // Check if the pointer is within the heap.
-    if (!heap || !ptr)
+    if (ptr == NULL)
     {
         return 0;
     }
+
+#if HEAP_BACKEND == HEAP_BACKEND_SBRK || HEAP_BACKEND == HEAP_BACKEND_MMAP
+    if (heap == NULL) 
+    {
+        return 0; 
+    }
+#endif
+
     const char *cptr = (const char *)ptr;
     return cptr >= heap && cptr < (heap + heap_size);
 }
