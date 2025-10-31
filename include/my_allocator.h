@@ -20,6 +20,25 @@
 #include <stddef.h>  // For size_t
 #include <stdint.h>  // For uint32_t, uintptr_t
 
+// --- V2.0 HEAP BACKEND CONFIGURATION ---
+#define HEAP_BACKEND_STATIC 1
+#define HEAP_BACKEND_SBRK 2
+#define HEAP_BACKEND_MMAP 3
+
+// Default to static heap for embedded builds
+#ifndef HEAP_BACKEND
+#define HEAP_BACKEND HEAP_BACKEND_STATIC
+#endif
+
+// Conditionally include OS headers
+#if HEAP_BACKEND == HEAP_BACKEND_SBRK
+    #include <unistd.h> // For sbrk()
+#elif HEAP_BACKEND == HEAP_BACKEND_MMAP
+    #include <sys/mman.h> // For mmap()
+    #include <unistd.h>
+#endif
+// --- END V2.0 HEAP BACKEND CONFIGURATION ---
+
 // --- Congfiguration Constants ---
 
 #define HEAP_SIZE (1024 * 10) ///< Total size of the heap in bytes.

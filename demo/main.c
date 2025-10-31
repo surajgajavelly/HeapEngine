@@ -22,6 +22,7 @@ int main() {
     demo_calloc();
     demo_realloc();
 
+    allocator_destroy();
     printf("--- Allocator Demo End ---\n");
     return 0;
 }

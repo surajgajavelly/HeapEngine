@@ -2,6 +2,21 @@ cmake_minimum_required(VERSION 3.10)
 
 project(HeapEngine VERSION 1.0.0 LANGUAGES C)
 
+# --- V2.0: Backend Configuration ---
+# Create a CMake option to choose the backend
+set(HEAP_BACKEND_STATIC 1)
+set(HEAP_BACKEND_SBRK 2)
+set(HEAP_BACKEND_MMAP 3)
+
+# Define the option (default to STATIC for embedded)
+set(HEAP_BACKEND ${HEAP_BACKEND_STATIC} CACHE STRING "Select heap backend: 1=STATIC, 2=SBRK, 3=MMAP")
+
+# Add the definition globally to all targets
+add_compile_definitions(HEAP_BACKEND=${HEAP_BACKEND})
+
+message(STATUS "Configuring HeapEngine with Backend: ${HEAP_BACKEND}")
+# --- End V2.0 ---
+
 # --- Configuration ---
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
