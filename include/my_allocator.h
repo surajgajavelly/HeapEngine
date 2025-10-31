@@ -32,10 +32,10 @@
 
 // Conditionally include OS headers
 #if HEAP_BACKEND == HEAP_BACKEND_SBRK
-    #include <unistd.h> // For sbrk()
+#include <unistd.h> // For sbrk()
 #elif HEAP_BACKEND == HEAP_BACKEND_MMAP
-    #include <sys/mman.h> // For mmap()
-    #include <unistd.h>
+#include <sys/mman.h> // For mmap()
+#include <unistd.h>
 #endif
 // --- END V2.0 HEAP BACKEND CONFIGURATION ---
 
@@ -111,7 +111,7 @@ void *my_realloc(void *ptr, size_t new_size);
 
 /**
  * @brief (V2.0) Cleans up the allocator, unmapping memory if necessary.
- * 
+ *
  */
 void allocator_destroy(void);
 

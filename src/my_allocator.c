@@ -18,19 +18,19 @@
 
 // --- V2.0: Global Heap State ---
 #if HEAP_BACKEND == HEAP_BACKEND_STATIC
-    static char heap[HEAP_SIZE];
-    static size_t heap_size = HEAP_SIZE;
+static char heap[HEAP_SIZE];
+static size_t heap_size = HEAP_SIZE;
 #elif HEAP_BACKEND == HEAP_BACKEND_SBRK
-    static char *heap = NULL;
-    static size_t heap_size = 0;
+static char *heap = NULL;
+static size_t heap_size = 0;
 #elif HEAP_BACKEND == HEAP_BACKEND_MMAP
-    static char *heap = NULL;
-    static size_t heap_size = 0;
+static char *heap = NULL;
+static size_t heap_size = 0;
 #endif
 
-
-/** @brief Pointer to the first block in the singly-linked explicit free list. */
-static BlockHeader *free_list_head = NULL; 
+/** @brief Pointer to the first block in the singly-linked explicit free list.
+ */
+static BlockHeader *free_list_head = NULL;
 
 // --- Helper Functions ---
 
@@ -42,19 +42,17 @@ static BlockHeader *free_list_head = NULL;
  */
 static int is_within_heap(const void *ptr) {
     // Check if the pointer is within the heap.
-    if (ptr == NULL)
-    {
+    if (ptr == NULL) {
         return 0;
     }
 
 #if HEAP_BACKEND == HEAP_BACKEND_SBRK || HEAP_BACKEND == HEAP_BACKEND_MMAP
-    if (heap == NULL) 
-    {
-        return 0; 
+    if (heap == NULL) {
+        return 0;
     }
 #endif
 
-    const char *cptr = (const char *)ptr;
+    const char *cptr = (const char *) ptr;
     return cptr >= heap && cptr < (heap + heap_size);
 }
 
@@ -199,37 +197,34 @@ static BlockHeader *coalesce_block(BlockHeader *block_to_free) {
  *
  * Sets up the entire heap as a single, large free block.
  */
-void allocator_init(void) 
-{
+void allocator_init(void) {
 #if HEAP_BACKEND == HEAP_BACKEND_STATIC
     heap_size = HEAP_SIZE;
 #elif HEAP_BACKEND == HEAP_BACKEND_SBRK
     void *mem = sbrk(HEAP_SIZE);
-    if (mem == (void *) -1) 
-    {
+    if (mem == (void *) -1) {
         perror("allocator_init: sbrk failed");
         heap = NULL;
         heap_size = 0;
-        return;    
+        return;
     }
-    heap = (char*)mem;
+    heap = (char *) mem;
     heap_size = HEAP_SIZE;
 #elif HEAP_BACKEND == HEAP_BACKEND_MMAP
-    heap = (char*)mmap(NULL, HEAP_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-    if (heap == MAP_FAILED) 
-    {
+    heap = (char *) mmap(NULL, HEAP_SIZE, PROT_READ | PROT_WRITE,
+                         MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (heap == MAP_FAILED) {
         perror("allocator_init: mmap failed");
         heap = NULL;
         heap_size = 0;
-        return;    
+        return;
     }
     heap_size = HEAP_SIZE;
 #endif
 
-    if (heap == NULL || heap_size == 0) 
-    {
+    if (heap == NULL || heap_size == 0) {
         free_list_head = NULL;
-        return;    
+        return;
     }
 
     // Setup free list.
@@ -453,11 +448,9 @@ void *my_realloc(void *ptr, size_t new_size) {
     return new_ptr;
 }
 
-void allocator_destroy(void)
-{
+void allocator_destroy(void) {
 #if HEAP_BACKEND == HEAP_BACKEND_MMAP
-    if (heap != NULL && heap_size > 0)
-    {
+    if (heap != NULL && heap_size > 0) {
         munmap(heap, heap_size);
     }
 #elif HEAP_BACKEND == HEAP_BACKEND_SBRK
