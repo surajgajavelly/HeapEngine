@@ -18,6 +18,8 @@
 
 // --- V2.0: Global Heap State ---
 #if HEAP_BACKEND == HEAP_BACKEND_STATIC
+
+__attribute__((section(".my_heap"))) // Force heap to be in .my_heap section
 static char heap[HEAP_SIZE];
 static size_t heap_size = HEAP_SIZE;
 #elif HEAP_BACKEND == HEAP_BACKEND_SBRK
