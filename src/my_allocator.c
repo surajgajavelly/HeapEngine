@@ -223,8 +223,7 @@ void allocator_init(void) {
 #endif
 
 #if HEAP_BACKEND == HEAP_BACKEND_SBRK || HEAP_BACKEND == HEAP_BACKEND_MMAP
-    if (heap == NULL || heap_size == 0)
-    {
+    if (heap == NULL || heap_size == 0) {
         free_list_head = NULL;
         return;
     }
