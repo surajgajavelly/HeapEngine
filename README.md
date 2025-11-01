@@ -1,12 +1,13 @@
 # HeapEngine: A Custom C Memory Allocator (V2.1)
 
-![CI/CD Pipeline](assets/output.gif)
-
 ![Unit Tests and Valgrind](assets/ci.png)
+
+![CI/CD Pipeline](assets/output.gif)
 
 This is a custom dynamic memory allocator (`malloc`, `free`, `calloc`, `realloc`)
 written in C from scratch. It is built to be portable across standard OS
 environments (Linux) and bare-metal embedded systems (like STM32).
+
 
 The allocator is built using a TDD (Test-Driven Development) workflow,
 is fully tested with the Unity framework, and is validated for memory
